@@ -41,6 +41,9 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_TEST_POLICIES: ${{ secrets.CLOUDFLARE_TEST_POLICIES }}
+          # Optional: enables the user-context (token_type=user) case.
+          CLOUDFLARE_USER_API_TOKEN: ${{ secrets.CLOUDFLARE_USER_API_TOKEN }}
+          CLOUDFLARE_USER_TEST_POLICIES: ${{ secrets.CLOUDFLARE_USER_TEST_POLICIES }}
         run: |
           if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
             echo "Cloudflare secrets not configured; skipping live acceptance tests."

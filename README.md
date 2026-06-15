@@ -151,13 +151,25 @@ go test ./...
 There is also an acceptance test that mints and revokes a real token against
 the live Cloudflare API. It is skipped unless `VAULT_ACC` is set:
 
+The test has two subtests, one per token context:
+
 ```bash
 export VAULT_ACC=1
 export CLOUDFLARE_ACCOUNT_ID="<account-id>"
-export CLOUDFLARE_API_TOKEN="<parent-api-token>"   # needs "API Tokens Write"
+
+# account-context case (token_type=account)
+export CLOUDFLARE_API_TOKEN="<parent-account-token>"   # needs "Account · API Tokens · Edit"
 # Optional: override the role's policies (defaults to a low-privilege
 # "Account Settings Read" policy scoped to the account).
 # export CLOUDFLARE_TEST_POLICIES='[{"effect":"allow","permission_groups":[{"name":"DNS Read"}],"resources":{"com.cloudflare.api.account.zone.<zone-id>":"*"}}]'
 
+# user-context case (token_type=user) — runs only when this is set
+export CLOUDFLARE_USER_API_TOKEN="<parent-user-token>"  # needs "User · API Tokens · Edit"
+# export CLOUDFLARE_USER_TEST_POLICIES='[...]'
+
 go test -run TestAcceptance -v
 ```
+
+The `user` subtest is skipped unless `CLOUDFLARE_USER_API_TOKEN` is set. Both
+cases default to the same account-scoped policy, since account-scoped permission
+groups are valid in user-owned tokens.
