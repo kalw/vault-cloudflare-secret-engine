@@ -96,7 +96,7 @@ func (b *cloudflareBackend) getClient(ctx context.Context, s logical.Storage) (*
 		return nil, errBackendNotConfigured
 	}
 
-	b.client = newCloudflareClient(config.AccountID, config.APIToken)
+	b.client = newCloudflareClient(config.APIToken)
 	return b.client, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -57,18 +58,33 @@ func (b *cloudflareBackend) secretTokenRevoke(ctx context.Context, req *logical.
 	return nil, nil
 }
 
-// secretTokenRenew extends the Vault lease. The Cloudflare-side expiry was set
-// to max_ttl at creation, so renewals within that window need no API call.
+// secretTokenRenew extends the Vault lease within the bounds fixed at issuance.
+// The Cloudflare-side expiry was set to max_ttl at creation, so MaxTTL must be
+// the same value used then — not the current config — otherwise the lease could
+// outlive the (already expired) Cloudflare token.
 func (b *cloudflareBackend) secretTokenRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	config, err := getConfig(ctx, req.Storage)
-	if err != nil {
-		return nil, err
-	}
-
 	resp := &logical.Response{Secret: req.Secret}
-	if config != nil {
-		resp.Secret.TTL = config.TTL
-		resp.Secret.MaxTTL = config.MaxTTL
+	if ttl := internalDuration(req.Secret.InternalData["ttl_seconds"]); ttl > 0 {
+		resp.Secret.TTL = ttl
+	}
+	if maxTTL := internalDuration(req.Secret.InternalData["max_ttl_seconds"]); maxTTL > 0 {
+		resp.Secret.MaxTTL = maxTTL
 	}
 	return resp, nil
+}
+
+// internalDuration converts a seconds value stored in a secret's InternalData
+// (which round-trips through JSON, so numbers come back as float64) into a
+// time.Duration. Unknown or missing values yield 0.
+func internalDuration(v interface{}) time.Duration {
+	switch n := v.(type) {
+	case float64:
+		return time.Duration(n) * time.Second
+	case int64:
+		return time.Duration(n) * time.Second
+	case int:
+		return time.Duration(n) * time.Second
+	default:
+		return 0
+	}
 }

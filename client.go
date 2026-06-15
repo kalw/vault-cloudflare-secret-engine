@@ -47,16 +47,14 @@ func (s tokenScope) basePath() (string, error) {
 // cloudflareClient wraps the Cloudflare API token endpoints. It authenticates
 // with a parent API token allowed to mint and delete other tokens.
 type cloudflareClient struct {
-	defaultAccountID string
-	apiToken         string
-	httpClient       *http.Client
+	apiToken   string
+	httpClient *http.Client
 }
 
-func newCloudflareClient(accountID, apiToken string) *cloudflareClient {
+func newCloudflareClient(apiToken string) *cloudflareClient {
 	return &cloudflareClient{
-		defaultAccountID: accountID,
-		apiToken:         apiToken,
-		httpClient:       &http.Client{Timeout: 30 * time.Second},
+		apiToken:   apiToken,
+		httpClient: &http.Client{Timeout: 30 * time.Second},
 	}
 }
 
@@ -152,15 +150,6 @@ func (c *cloudflareClient) do(ctx context.Context, method, path string, body, ou
 		}
 	}
 	return nil
-}
-
-// verify confirms the configured parent token is valid (account context).
-func (c *cloudflareClient) verify(ctx context.Context) error {
-	if c.defaultAccountID == "" {
-		return c.do(ctx, http.MethodGet, "/user/tokens/verify", nil, nil)
-	}
-	return c.do(ctx, http.MethodGet,
-		fmt.Sprintf("/accounts/%s/tokens/verify", c.defaultAccountID), nil, nil)
 }
 
 // listPermissionGroups returns the permission groups available in a scope.

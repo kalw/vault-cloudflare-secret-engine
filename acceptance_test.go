@@ -117,7 +117,7 @@ func runLifecycle(t *testing.T, accountID, parentToken, tokenType, policies stri
 	}
 
 	// 5. Confirm the token is gone: deleting it again should fail.
-	client := newCloudflareClient(accountID, parentToken)
+	client := newCloudflareClient(parentToken)
 	scope := tokenScope{Type: tokenType, AccountID: accountID}
 	if err := client.deleteToken(ctx, scope, tokenID); err == nil {
 		t.Fatal("expected second delete to fail (token should already be revoked)")

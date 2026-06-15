@@ -87,6 +87,30 @@ func TestResolvePermissionGroups_ByName(t *testing.T) {
 	}
 }
 
+func TestPoliciesNeedNameResolution(t *testing.T) {
+	idOnly := []policy{{PermissionGroups: []permissionGroup{{ID: "a"}, {ID: "b"}}}}
+	if policiesNeedNameResolution(idOnly) {
+		t.Fatal("ID-only policies should not need name resolution (would trigger a needless API call)")
+	}
+	withName := []policy{{PermissionGroups: []permissionGroup{{ID: "a"}, {Name: "DNS Read"}}}}
+	if !policiesNeedNameResolution(withName) {
+		t.Fatal("a name-only permission group must require resolution")
+	}
+}
+
+func TestResolvePermissionGroups_ClearsNameWithoutCatalog(t *testing.T) {
+	// When no name resolution is needed, resolve is still called with a nil
+	// catalog and must pass through IDs while clearing any stray names.
+	policies := []policy{{PermissionGroups: []permissionGroup{{ID: "a", Name: "DNS Read"}}}}
+	if err := resolvePermissionGroups(policies, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	pg := policies[0].PermissionGroups[0]
+	if pg.ID != "a" || pg.Name != "" {
+		t.Fatalf("expected {id:a name:\"\"}, got {id:%s name:%q}", pg.ID, pg.Name)
+	}
+}
+
 func TestResolvePermissionGroups_UnknownName(t *testing.T) {
 	policies := []policy{
 		{

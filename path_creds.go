@@ -82,13 +82,18 @@ func (b *cloudflareBackend) pathCredsRead(ctx context.Context, req *logical.Requ
 	}
 
 	// Parse the role's stored policies and resolve permission group names → IDs.
+	// The live permission group catalog is only fetched when a policy actually
+	// references a group by name; ID-only policies skip the extra round-trip.
 	policies, err := parsePolicies(string(role.Policies))
 	if err != nil {
 		return nil, fmt.Errorf("role %q has invalid stored policies: %w", roleName, err)
 	}
-	groups, err := client.listPermissionGroups(ctx, scope)
-	if err != nil {
-		return nil, fmt.Errorf("error listing cloudflare permission groups: %w", err)
+	var groups []permissionGroup
+	if policiesNeedNameResolution(policies) {
+		groups, err = client.listPermissionGroups(ctx, scope)
+		if err != nil {
+			return nil, fmt.Errorf("error listing cloudflare permission groups: %w", err)
+		}
 	}
 	if err := resolvePermissionGroups(policies, groups); err != nil {
 		return logical.ErrorResponse(err.Error()), nil
@@ -119,16 +124,34 @@ func (b *cloudflareBackend) pathCredsRead(ctx context.Context, req *logical.Requ
 			"role":       roleName,
 		},
 		map[string]interface{}{
-			// Internal data used at revoke time.
+			// Internal data used at revoke and renew time.
 			"token_id":   token.ID,
 			"token_type": scope.Type,
 			"account_id": scope.AccountID,
+			// Effective lease bounds, persisted so renewal stays consistent
+			// with the Cloudflare-side expires_on regardless of later config
+			// or role changes.
+			"ttl_seconds":     ttl.Seconds(),
+			"max_ttl_seconds": maxTTL.Seconds(),
 		},
 	)
 	resp.Secret.TTL = ttl
 	resp.Secret.MaxTTL = maxTTL
 
 	return resp, nil
+}
+
+// policiesNeedNameResolution reports whether any policy references a permission
+// group by name (i.e. without an ID), which requires fetching the live catalog.
+func policiesNeedNameResolution(policies []policy) bool {
+	for i := range policies {
+		for _, pg := range policies[i].PermissionGroups {
+			if pg.ID == "" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // resolvePermissionGroups rewrites each policy's permission groups so they carry
