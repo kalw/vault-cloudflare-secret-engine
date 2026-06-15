@@ -107,6 +107,10 @@ Permission groups may be referenced by `id` **or** by `name` — names are
 resolved against Cloudflare's live permission-group list when a token is
 generated.
 
+> 🔧 **[Policy builder](https://kalw.github.io/vault-cloudflare-secret-engine/)** —
+> a hosted page that generates the `policies` JSON and the `vault write` command
+> from pick-lists (permission groups, resource scopes). No install required.
+
 ```text
 $ vault write cloudflare/role/dns-editor \
     token_type="account" \
