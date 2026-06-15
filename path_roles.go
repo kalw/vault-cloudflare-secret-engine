@@ -15,20 +15,24 @@ import (
 // Cloudflare token context (account vs user) and the full policy set (ACL +
 // resources) that every generated token receives.
 type cloudflareRoleEntry struct {
-	TokenType string          `json:"token_type"`
-	AccountID string          `json:"account_id,omitempty"`
-	Policies  json.RawMessage `json:"policies"`
-	TTL       time.Duration   `json:"ttl"`
-	MaxTTL    time.Duration   `json:"max_ttl"`
+	TokenType      string          `json:"token_type"`
+	AccountID      string          `json:"account_id,omitempty"`
+	Policies       json.RawMessage `json:"policies"`
+	RequestIPIn    []string        `json:"request_ip_in,omitempty"`
+	RequestIPNotIn []string        `json:"request_ip_not_in,omitempty"`
+	TTL            time.Duration   `json:"ttl"`
+	MaxTTL         time.Duration   `json:"max_ttl"`
 }
 
 func (r *cloudflareRoleEntry) toResponseData() map[string]interface{} {
 	return map[string]interface{}{
-		"token_type": r.TokenType,
-		"account_id": r.AccountID,
-		"policies":   json.RawMessage(r.Policies),
-		"ttl":        int64(r.TTL.Seconds()),
-		"max_ttl":    int64(r.MaxTTL.Seconds()),
+		"token_type":        r.TokenType,
+		"account_id":        r.AccountID,
+		"policies":          json.RawMessage(r.Policies),
+		"request_ip_in":     r.RequestIPIn,
+		"request_ip_not_in": r.RequestIPNotIn,
+		"ttl":               int64(r.TTL.Seconds()),
+		"max_ttl":           int64(r.MaxTTL.Seconds()),
 	}
 }
 
@@ -55,6 +59,14 @@ func pathRole(b *cloudflareBackend) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: `JSON array of Cloudflare token policies. Each policy has "effect" (default "allow"), "permission_groups" (each entry by {"id":...} or {"name":...}), and "resources" (the Cloudflare resource map).`,
 					Required:    true,
+				},
+				"request_ip_in": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Optional client-IP allow list (IPv4/IPv6 CIDRs). The token is only valid from these addresses.",
+				},
+				"request_ip_not_in": {
+					Type:        framework.TypeCommaStringSlice,
+					Description: "Optional client-IP deny list (IPv4/IPv6 CIDRs). The token is rejected from these addresses.",
 				},
 				"ttl": {
 					Type:        framework.TypeDurationSecond,
@@ -154,6 +166,13 @@ func (b *cloudflareBackend) pathRolesWrite(ctx context.Context, req *logical.Req
 		role.Policies = canonical
 	} else if createOperation {
 		return logical.ErrorResponse("missing policies"), nil
+	}
+
+	if v, ok := d.GetOk("request_ip_in"); ok {
+		role.RequestIPIn = v.([]string)
+	}
+	if v, ok := d.GetOk("request_ip_not_in"); ok {
+		role.RequestIPNotIn = v.([]string)
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {

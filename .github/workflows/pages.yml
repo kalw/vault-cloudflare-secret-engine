@@ -28,6 +28,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Generate permission group catalog
+        env:
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_USER_TOKEN: ${{ secrets.CLOUDFLARE_USER_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          # The page falls back to its curated list if this file is absent.
+          if [ -z "${CF_TOKEN:-}" ] || [ -z "${CF_ACCOUNT:-}" ]; then
+            echo "Cloudflare secrets not set; shipping curated catalog only."
+            exit 0
+          fi
+          base="https://api.cloudflare.com/client/v4"
+          acct=$(curl -sf -H "Authorization: Bearer $CF_TOKEN" \
+            "$base/accounts/$CF_ACCOUNT/tokens/permission_groups?per_page=1000" || echo '{"result":[]}')
+          user=$(curl -sf -H "Authorization: Bearer ${CF_USER_TOKEN:-$CF_TOKEN}" \
+            "$base/user/tokens/permission_groups?per_page=1000" || echo '{"result":[]}')
+          jq -n --argjson a "$acct" --argjson u "$user" \
+            '(($a.result // []) + ($u.result // [])) | map({id, name, scopes}) | unique_by(.id)' \
+            > site/permission_groups.json
+          echo "Catalog: $(jq length site/permission_groups.json) permission groups."
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
