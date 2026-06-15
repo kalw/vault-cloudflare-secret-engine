@@ -116,7 +116,6 @@ system restricts which identities may use which roles.
 ### Build the code
 
 ```bash
-GOOS=linux GOARCH=amd64 go build -o vault-cloudflare-secret-engine ./cmd/vault-cloudflare-secret-engine
 docker build -t vault-plugin .
 docker run --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234' -p 1234:1234 vault-plugin
 ```
