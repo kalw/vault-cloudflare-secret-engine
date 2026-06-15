@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Policy Builder · vault-cloudflare-secret-engine</title>
+<meta name="description" content="Build the policies JSON and vault write command for a vault-cloudflare-secret-engine role." />
+<style>
+  :root {
+    --bg: #ffffff; --panel: #f6f7f9; --border: #e3e6ea; --text: #1d2733;
+    --muted: #5b6775; --accent: #f6821f; --accent-fg: #ffffff;
+    --code-bg: #0d1117; --code-fg: #e6edf3; --danger: #d23f3f; --ok: #1a8c4a;
+    --radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f141a; --panel: #161c24; --border: #2a323d; --text: #e6edf3;
+      --muted: #9aa7b4; --code-bg: #0b0f14; --code-fg: #e6edf3;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    border-bottom: 1px solid var(--border); padding: 20px 24px;
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  header .dot { width: 10px; height: 26px; background: var(--accent); border-radius: 3px; }
+  header h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  header .spacer { flex: 1; }
+  header a { color: var(--accent); text-decoration: none; font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; display: grid; gap: 20px; grid-template-columns: 1fr; }
+  @media (min-width: 940px) { main { grid-template-columns: 1.05fr 0.95fr; align-items: start; } }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .card h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 14px; }
+  label { display: block; font-size: 13px; font-weight: 600; margin: 0 0 5px; }
+  .hint { color: var(--muted); font-size: 12px; font-weight: 400; }
+  input[type=text], select, textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); font: inherit;
+  }
+  .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+  .field { margin-bottom: 14px; }
+  button {
+    font: inherit; border: 1px solid var(--border); background: var(--bg); color: var(--text);
+    padding: 7px 12px; border-radius: 8px; cursor: pointer;
+  }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+  button.link { border: none; background: none; color: var(--accent); padding: 4px; }
+  button.tiny { padding: 3px 8px; font-size: 12px; }
+  .policy { border: 1px dashed var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 14px; }
+  .policy-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .policy-head .n { font-weight: 650; }
+  .pg-search { margin-bottom: 8px; }
+  .pg-box { max-height: 230px; overflow: auto; border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--bg); }
+  .pg-scope { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 8px 4px 4px; }
+  .pg-item { display: flex; align-items: center; gap: 8px; padding: 3px 4px; font-size: 13px; }
+  .pg-item input { width: auto; }
+  .resource { display: grid; grid-template-columns: 150px 1fr auto; gap: 8px; align-items: start; margin-bottom: 8px; }
+  .resource .preview { grid-column: 1 / -1; font-size: 11px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+  pre {
+    background: var(--code-bg); color: var(--code-fg); padding: 14px; border-radius: 8px;
+    overflow: auto; font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; margin: 0;
+  }
+  .out-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .out-head h2 { margin: 0; }
+  .sticky { position: sticky; top: 16px; }
+  .warn { color: var(--danger); font-size: 13px; margin-top: 8px; min-height: 18px; }
+  .ok { color: var(--ok); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  code.k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--bg); padding: 1px 5px; border-radius: 5px; border: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <div class="dot"></div>
+  <div>
+    <h1>Cloudflare role policy builder</h1>
+    <p>Generate the <code class="k">policies</code> JSON and <code class="k">vault write</code> command for a role.</p>
+  </div>
+  <div class="spacer"></div>
+  <a href="https://github.com/kalw/vault-cloudflare-secret-engine" target="_blank" rel="noopener">GitHub ↗</a>
+</header>
+
+<main>
+  <section>
+    <div class="card">
+      <h2>Role</h2>
+      <div class="row">
+        <div class="field">
+          <label for="roleName">Role name</label>
+          <input type="text" id="roleName" value="dns-editor" />
+        </div>
+        <div class="field">
+          <label for="tokenType">Token type <span class="hint">(context)</span></label>
+          <select id="tokenType">
+            <option value="account">account — service-tied</option>
+            <option value="user">user — tied to the parent user</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="ttl">ttl <span class="hint">(optional)</span></label>
+          <input type="text" id="ttl" placeholder="e.g. 30m" />
+        </div>
+        <div class="field">
+          <label for="maxTtl">max_ttl <span class="hint">(optional)</span></label>
+          <input type="text" id="maxTtl" placeholder="e.g. 2h" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="out-head">
+        <h2>Policies</h2>
+        <button class="primary tiny" id="addPolicy">+ Add policy</button>
+      </div>
+      <div id="policies"></div>
+    </div>
+  </section>
+
+  <section class="sticky">
+    <div class="card">
+      <div class="out-head">
+        <h2>policies JSON</h2>
+        <button class="link" data-copy="jsonOut">Copy</button>
+      </div>
+      <pre id="jsonOut"></pre>
+      <div class="warn" id="warn"></div>
+    </div>
+
+    <div class="card" style="margin-top:20px">
+      <div class="out-head">
+        <h2>vault command</h2>
+        <button class="link" data-copy="cmdOut">Copy</button>
+      </div>
+      <pre id="cmdOut"></pre>
+      <p class="note">
+        Permission groups may be given by <code class="k">name</code> or 32-hex
+        <code class="k">id</code>; the plugin resolves names against Cloudflare's
+        live catalog when a token is minted. The list here is a convenience
+        subset — type any exact name in the custom field for anything not shown.
+      </p>
+    </div>
+  </section>
+</main>
+
+<!-- Resource row template -->
+<template id="resourceTpl">
+  <div class="resource">
+    <select class="rtype">
+      <option value="zone">Specific zone</option>
+      <option value="account">Whole account</option>
+      <option value="allzones">All zones in account</option>
+      <option value="user">User</option>
+      <option value="custom">Custom…</option>
+    </select>
+    <input type="text" class="rid" placeholder="zone ID" />
+    <input type="text" class="rkey" placeholder="resource key" style="display:none" />
+    <input type="text" class="rval" placeholder='value ("*" or JSON)' style="display:none" />
+    <button class="tiny rdel" title="Remove resource">✕</button>
+    <div class="preview"></div>
+  </div>
+</template>
+
+<!-- Policy template -->
+<template id="policyTpl">
+  <div class="policy">
+    <div class="policy-head">
+      <span class="n">Policy</span>
+      <select class="effect" style="width:auto">
+        <option value="allow">allow</option>
+        <option value="deny">deny</option>
+      </select>
+      <div class="spacer" style="flex:1"></div>
+      <button class="tiny pdel" title="Remove policy">Remove</button>
+    </div>
+
+    <div class="field">
+      <label>Permission groups</label>
+      <input type="text" class="pg-search" placeholder="Filter permission groups…" />
+      <div class="pg-box"></div>
+    </div>
+
+    <div class="field">
+      <label>Custom permission groups <span class="hint">comma-separated names or 32-hex IDs</span></label>
+      <input type="text" class="customGroups" placeholder="e.g. Stream Read, 4755a26eedb94da69e1066d98aa820be" />
+    </div>
+
+    <div class="field">
+      <label>Resources</label>
+      <div class="resources"></div>
+      <button class="tiny addResource">+ Add resource</button>
+    </div>
+  </div>
+</template>
+
+<script>
+// Curated permission-group catalog (names + scope), grounded in Cloudflare's
+// token permission_groups API. Names must match Cloudflare exactly; the plugin
+// resolves them to IDs at generation time.
+const PERMISSION_GROUPS = {
+  "Account": [
+    "Account Settings Read", "Account Settings Write",
+    "Account Rulesets Read", "Account Rulesets Write",
+    "Account API Tokens Read", "Account API Tokens Write",
+    "Billing Read",
+    "Workers Scripts Read", "Workers Scripts Write",
+    "Workers KV Storage Read", "Workers KV Storage Write",
+    "Workers R2 Storage Read", "Workers R2 Storage Write",
+    "Load Balancing: Monitors and Pools Read", "Load Balancing: Monitors and Pools Write",
+    "Access: Apps and Policies Read", "Access: Apps and Policies Write",
+    "Access: Service Tokens Read", "Access: Service Tokens Write",
+    "Cloudflare Tunnel Read", "Cloudflare Tunnel Write",
+    "Logs Read"
+  ],
+  "Zone": [
+    "Zone Read",
+    "Zone Settings Read", "Zone Settings Write",
+    "DNS Read", "DNS Write",
+    "SSL and Certificates Read", "SSL and Certificates Write",
+    "Page Rules Read", "Page Rules Write",
+    "Cache Purge",
+    "Firewall Services Read", "Firewall Services Write",
+    "Zone WAF Read", "Zone WAF Write",
+    "Workers Routes Read", "Workers Routes Write",
+    "Transform Rules Read", "Transform Rules Write",
+    "Analytics Read"
+  ],
+  "User": [
+    "User Details Read", "User Details Write",
+    "Memberships Read",
+    "User API Tokens Read", "User API Tokens Write"
+  ]
+};
+
+const q = (s, r = document) => r.querySelector(s);
+const qa = (s, r = document) => [...r.querySelectorAll(s)];
+
+function makeResourceRow() {
+  const node = q("#resourceTpl").content.firstElementChild.cloneNode(true);
+  const rtype = node.querySelector(".rtype");
+  const rid = node.querySelector(".rid");
+  const rkey = node.querySelector(".rkey");
+  const rval = node.querySelector(".rval");
+  function sync() {
+    const t = rtype.value;
+    const custom = t === "custom";
+    rid.style.display = custom ? "none" : "";
+    rkey.style.display = custom ? "" : "none";
+    rval.style.display = custom ? "" : "none";
+    rid.placeholder =
+      t === "zone" ? "zone ID" :
+      t === "user" ? "user ID" : "account ID";
+    refresh();
+  }
+  rtype.addEventListener("change", sync);
+  node.querySelector(".rdel").addEventListener("click", () => { node.remove(); refresh(); });
+  sync();
+  return node;
+}
+
+function makePolicy() {
+  const node = q("#policyTpl").content.firstElementChild.cloneNode(true);
+  const box = node.querySelector(".pg-box");
+
+  // Render grouped permission-group checkboxes.
+  for (const [scope, names] of Object.entries(PERMISSION_GROUPS)) {
+    const h = document.createElement("div");
+    h.className = "pg-scope";
+    h.textContent = scope + " scoped";
+    box.appendChild(h);
+    for (const name of names) {
+      const wrap = document.createElement("label");
+      wrap.className = "pg-item";
+      wrap.dataset.name = name.toLowerCase();
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.className = "pg"; cb.value = name;
+      const span = document.createElement("span");
+      span.textContent = name;
+      wrap.append(cb, span);
+      box.appendChild(wrap);
+    }
+  }
+
+  // Filter
+  node.querySelector(".pg-search").addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    qa(".pg-item", box).forEach(it => {
+      it.style.display = it.dataset.name.includes(term) ? "" : "none";
+    });
+    qa(".pg-scope", box).forEach(s => { s.style.display = term ? "none" : ""; });
+  });
+
+  node.querySelector(".pdel").addEventListener("click", () => {
+    if (qa(".policy").length > 1) { node.remove(); refresh(); }
+  });
+  const resources = node.querySelector(".resources");
+  node.querySelector(".addResource").addEventListener("click", () => {
+    resources.appendChild(makeResourceRow()); refresh();
+  });
+  resources.appendChild(makeResourceRow());
+  return node;
+}
+
+function readResources(policyEl) {
+  const resources = {};
+  qa(".resource", policyEl).forEach(r => {
+    const t = r.querySelector(".rtype").value;
+    const id = (r.querySelector(".rid").value || "").trim();
+    const preview = r.querySelector(".preview");
+    let key = "", val = "*";
+    if (t === "account") key = "com.cloudflare.api.account." + id;
+    else if (t === "zone") key = "com.cloudflare.api.account.zone." + id;
+    else if (t === "user") key = "com.cloudflare.api.user." + id;
+    else if (t === "allzones") { key = "com.cloudflare.api.account." + id; val = { "com.cloudflare.api.account.zone.*": "*" }; }
+    else if (t === "custom") {
+      key = (r.querySelector(".rkey").value || "").trim();
+      const raw = (r.querySelector(".rval").value || "").trim();
+      try { val = raw.startsWith("{") ? JSON.parse(raw) : (raw || "*"); } catch { val = raw; }
+    }
+    if (t !== "custom" && !id) { preview.textContent = "↳ enter an ID"; return; }
+    if (!key) { preview.textContent = ""; return; }
+    resources[key] = val;
+    preview.textContent = "↳ " + JSON.stringify({ [key]: val });
+  });
+  return resources;
+}
+
+function refresh() {
+  const roleName = q("#roleName").value.trim() || "<role>";
+  const tokenType = q("#tokenType").value;
+  const ttl = q("#ttl").value.trim();
+  const maxTtl = q("#maxTtl").value.trim();
+  const warnings = [];
+
+  const policies = qa(".policy").map((pol, i) => {
+    const effect = pol.querySelector(".effect").value;
+    const groups = qa(".pg:checked", pol).map(c => ({ name: c.value }));
+    (pol.querySelector(".customGroups").value || "").split(",").map(s => s.trim()).filter(Boolean)
+      .forEach(g => groups.push(/^[0-9a-f]{32}$/i.test(g) ? { id: g } : { name: g }));
+    const resources = readResources(pol);
+
+    if (groups.length === 0) warnings.push(`Policy ${i + 1}: add at least one permission group.`);
+    if (Object.keys(resources).length === 0) warnings.push(`Policy ${i + 1}: add at least one resource.`);
+    return { effect, permission_groups: groups, resources };
+  });
+
+  q("#jsonOut").textContent = JSON.stringify(policies, null, 2);
+
+  const compact = JSON.stringify(policies);
+  let cmd = `vault write cloudflare/role/${roleName} \\\n  token_type=${tokenType} \\\n`;
+  if (ttl) cmd += `  ttl=${ttl} \\\n`;
+  if (maxTtl) cmd += `  max_ttl=${maxTtl} \\\n`;
+  cmd += `  policies='${compact}'`;
+  q("#cmdOut").textContent = cmd;
+
+  const warn = q("#warn");
+  warn.textContent = warnings.length ? warnings.join(" ") : "✓ ready";
+  warn.className = warnings.length ? "warn" : "warn ok";
+}
+
+// Recompute on any input across the form.
+document.addEventListener("input", refresh);
+document.addEventListener("change", refresh);
+
+q("#addPolicy").addEventListener("click", () => { q("#policies").appendChild(makePolicy()); refresh(); });
+
+// Copy buttons
+qa("[data-copy]").forEach(btn => btn.addEventListener("click", async () => {
+  const text = q("#" + btn.dataset.copy).textContent;
+  try { await navigator.clipboard.writeText(text); const o = btn.textContent; btn.textContent = "Copied!"; setTimeout(() => btn.textContent = o, 1200); }
+  catch { /* clipboard unavailable */ }
+}));
+
+// Seed one policy mirroring the README example.
+q("#policies").appendChild(makePolicy());
+(function seed() {
+  const pol = q(".policy");
+  qa(".pg", pol).forEach(c => { if (c.value === "DNS Write" || c.value === "Zone Read") c.checked = true; });
+  const r = pol.querySelector(".resource");
+  r.querySelector(".rtype").value = "zone";
+  r.querySelector(".rid").value = "";
+})();
+refresh();
+</script>
+</body>
+</html>
