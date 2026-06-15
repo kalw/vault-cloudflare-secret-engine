@@ -1,0 +1,7 @@
+# Compiled plugin binary
+/vault-cloudflare-secret-engine
+/bin/
+
+# Go build/test artifacts
+*.test
+*.out
