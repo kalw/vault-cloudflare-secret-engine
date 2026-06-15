@@ -88,11 +88,24 @@ type policy struct {
 	PermissionGroups []permissionGroup `json:"permission_groups"`
 }
 
+// requestIP is the client-IP restriction on a token.
+type requestIP struct {
+	In    []string `json:"in,omitempty"`
+	NotIn []string `json:"not_in,omitempty"`
+}
+
+// tokenCondition carries optional token-level conditions (currently only the
+// client-IP restriction).
+type tokenCondition struct {
+	RequestIP *requestIP `json:"request_ip,omitempty"`
+}
+
 // createTokenRequest is the body for POST .../tokens.
 type createTokenRequest struct {
-	Name      string   `json:"name"`
-	Policies  []policy `json:"policies"`
-	ExpiresOn string   `json:"expires_on,omitempty"`
+	Name      string          `json:"name"`
+	Policies  []policy        `json:"policies"`
+	Condition *tokenCondition `json:"condition,omitempty"`
+	ExpiresOn string          `json:"expires_on,omitempty"`
 }
 
 // tokenResult is the relevant subset of the create-token response.

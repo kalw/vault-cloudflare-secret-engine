@@ -116,6 +116,21 @@
     </div>
 
     <div class="card" style="margin-top:20px">
+      <h2>Token IP restriction <span class="hint">(optional)</span></h2>
+      <div class="row">
+        <div class="field">
+          <label for="ipIn">Allow IPs <span class="hint">request_ip_in</span></label>
+          <input type="text" id="ipIn" placeholder="203.0.113.0/24, 2001:db8::/32" />
+        </div>
+        <div class="field">
+          <label for="ipNotIn">Deny IPs <span class="hint">request_ip_not_in</span></label>
+          <input type="text" id="ipNotIn" placeholder="198.51.100.7/32" />
+        </div>
+      </div>
+      <p class="note" style="margin:0">Comma-separated IPv4/IPv6 CIDRs. Applied to the whole token via Cloudflare's <code class="k">condition.request_ip</code>.</p>
+    </div>
+
+    <div class="card" style="margin-top:20px">
       <div class="out-head">
         <h2>Policies</h2>
         <button class="primary tiny" id="addPolicy">+ Add policy</button>
@@ -143,9 +158,10 @@
       <p class="note">
         Permission groups may be given by <code class="k">name</code> or 32-hex
         <code class="k">id</code>; the plugin resolves names against Cloudflare's
-        live catalog when a token is minted. The list here is a convenience
-        subset — type any exact name in the custom field for anything not shown.
+        live catalog when a token is minted. Type any exact name in the custom
+        field for anything not listed.
       </p>
+      <p class="note" id="catalogNote">Using the built-in curated permission-group list.</p>
     </div>
   </section>
 </main>
@@ -201,10 +217,10 @@
 </template>
 
 <script>
-// Curated permission-group catalog (names + scope), grounded in Cloudflare's
-// token permission_groups API. Names must match Cloudflare exactly; the plugin
-// resolves them to IDs at generation time.
-const PERMISSION_GROUPS = {
+// Curated fallback catalog (names + scope), used when the full list generated
+// at build time (permission_groups.json) is unavailable. Names must match
+// Cloudflare exactly; the plugin resolves them to IDs at generation time.
+const CURATED = {
   "Account": [
     "Account Settings Read", "Account Settings Write",
     "Account Rulesets Read", "Account Rulesets Write",
@@ -242,6 +258,43 @@ const PERMISSION_GROUPS = {
 const q = (s, r = document) => r.querySelector(s);
 const qa = (s, r = document) => [...r.querySelectorAll(s)];
 
+// Active catalog: starts as the curated fallback, replaced by the full list
+// (fetched from permission_groups.json, generated at deploy time) when present.
+let CATALOG = CURATED;
+
+// Map a permission group's Cloudflare scopes to a display bucket.
+function scopeLabel(scopes) {
+  const s = scopes || [];
+  if (s.includes("com.cloudflare.api.account.zone")) return "Zone";
+  if (s.includes("com.cloudflare.edge.r2.bucket")) return "R2";
+  if (s.includes("com.cloudflare.api.user")) return "User";
+  if (s.includes("com.cloudflare.api.account")) return "Account";
+  return "Other";
+}
+
+// Load the full catalog generated at build time, if available.
+async function loadCatalog() {
+  try {
+    const res = await fetch("./permission_groups.json", { cache: "no-store" });
+    if (!res.ok) return;
+    const list = await res.json();
+    if (!Array.isArray(list) || list.length === 0) return;
+    const grouped = {};
+    for (const g of list) {
+      if (!g || !g.name) continue;
+      const bucket = scopeLabel(g.scopes);
+      (grouped[bucket] ||= new Set()).add(g.name);
+    }
+    const order = ["Account", "Zone", "User", "R2", "Other"];
+    const out = {};
+    for (const k of order) if (grouped[k]) out[k] = [...grouped[k]].sort((a, b) => a.localeCompare(b));
+    if (Object.keys(out).length) {
+      CATALOG = out;
+      q("#catalogNote").textContent = `Loaded ${list.length} permission groups from Cloudflare.`;
+    }
+  } catch (_) { /* keep curated fallback */ }
+}
+
 function makeResourceRow() {
   const node = q("#resourceTpl").content.firstElementChild.cloneNode(true);
   const rtype = node.querySelector(".rtype");
@@ -270,7 +323,7 @@ function makePolicy() {
   const box = node.querySelector(".pg-box");
 
   // Render grouped permission-group checkboxes.
-  for (const [scope, names] of Object.entries(PERMISSION_GROUPS)) {
+  for (const [scope, names] of Object.entries(CATALOG)) {
     const h = document.createElement("div");
     h.className = "pg-scope";
     h.textContent = scope + " scoped";
@@ -353,10 +406,15 @@ function refresh() {
 
   q("#jsonOut").textContent = JSON.stringify(policies, null, 2);
 
+  const ipIn = q("#ipIn").value.trim();
+  const ipNotIn = q("#ipNotIn").value.trim();
+
   const compact = JSON.stringify(policies);
   let cmd = `vault write cloudflare/role/${roleName} \\\n  token_type=${tokenType} \\\n`;
   if (ttl) cmd += `  ttl=${ttl} \\\n`;
   if (maxTtl) cmd += `  max_ttl=${maxTtl} \\\n`;
+  if (ipIn) cmd += `  request_ip_in="${ipIn}" \\\n`;
+  if (ipNotIn) cmd += `  request_ip_not_in="${ipNotIn}" \\\n`;
   cmd += `  policies='${compact}'`;
   q("#cmdOut").textContent = cmd;
 
@@ -378,16 +436,15 @@ qa("[data-copy]").forEach(btn => btn.addEventListener("click", async () => {
   catch { /* clipboard unavailable */ }
 }));
 
-// Seed one policy mirroring the README example.
-q("#policies").appendChild(makePolicy());
-(function seed() {
+// Seed one policy mirroring the README example, after the catalog loads.
+(async function init() {
+  await loadCatalog();
+  q("#policies").appendChild(makePolicy());
   const pol = q(".policy");
   qa(".pg", pol).forEach(c => { if (c.value === "DNS Write" || c.value === "Zone Read") c.checked = true; });
-  const r = pol.querySelector(".resource");
-  r.querySelector(".rtype").value = "zone";
-  r.querySelector(".rid").value = "";
+  pol.querySelector(".rtype").value = "zone";
+  refresh();
 })();
-refresh();
 </script>
 </body>
 </html>

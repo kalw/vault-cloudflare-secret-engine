@@ -8,3 +8,6 @@
 
 # GoReleaser build output
 /dist/
+
+# Generated at deploy time by the Pages workflow
+site/permission_groups.json

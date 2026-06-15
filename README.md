@@ -142,6 +142,22 @@ The `resources` map accepts the full Cloudflare resource model, for example:
 List and read roles with `vault list cloudflare/role` and
 `vault read cloudflare/role/dns-editor`.
 
+#### Restricting tokens by client IP
+
+A role may also pin its tokens to client-IP ranges via Cloudflare's
+`condition.request_ip`. Both fields take comma-separated IPv4/IPv6 CIDRs:
+
+```text
+$ vault write cloudflare/role/dns-editor \
+    token_type="account" \
+    policies='[ ... ]' \
+    request_ip_in="203.0.113.0/24,2001:db8::/32" \
+    request_ip_not_in="203.0.113.7/32"
+```
+
+`request_ip_in` is an allow list (the token only works from those addresses);
+`request_ip_not_in` is a deny list. Either or both may be set.
+
 ### Usage
 
 After a role exists, read its credentials endpoint to mint a token:

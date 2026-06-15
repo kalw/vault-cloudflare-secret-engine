@@ -113,6 +113,12 @@ func (b *cloudflareBackend) pathCredsRead(ctx context.Context, req *logical.Requ
 		Policies:  policies,
 		ExpiresOn: time.Now().UTC().Add(backstop).Format(time.RFC3339),
 	}
+	if len(role.RequestIPIn) > 0 || len(role.RequestIPNotIn) > 0 {
+		tokenReq.Condition = &tokenCondition{RequestIP: &requestIP{
+			In:    role.RequestIPIn,
+			NotIn: role.RequestIPNotIn,
+		}}
+	}
 
 	token, err := client.createToken(ctx, scope, tokenReq)
 	if err != nil {
