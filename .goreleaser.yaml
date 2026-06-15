@@ -73,5 +73,6 @@ release:
     Pre-built `vault-cloudflare-secret-engine` plugin binaries.
 
     Download the asset matching your Vault server's OS/arch, verify it against
-    `checksums.txt`, then register the SHA-256 with Vault's plugin catalog. See
-    the README "Install (pre-built binary)" section for the exact steps.
+    `checksums.txt`, then register the SHA-256 with Vault's plugin catalog.
+
+    📦 **[Install instructions](https://github.com/kalw/vault-cloudflare-secret-engine#install-pre-built-binary)**
