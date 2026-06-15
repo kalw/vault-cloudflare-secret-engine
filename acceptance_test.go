@@ -72,12 +72,18 @@ func runLifecycle(t *testing.T, accountID, parentToken, tokenType, policies stri
 	}
 
 	// 1. Configure the backend with the parent credential for this context.
-	mustWrite(t, ctx, b, storage, "config", map[string]interface{}{
-		"cloudflare_account_id": accountID,
-		"cloudflare_api_token":  parentToken,
-		"ttl":                   "5m",
-		"max_ttl":               "10m",
-	})
+	configData := map[string]interface{}{
+		"ttl":     "5m",
+		"max_ttl": "10m",
+	}
+	switch tokenType {
+	case tokenTypeUser:
+		configData["cloudflare_user_api_token"] = parentToken
+	default:
+		configData["cloudflare_account_id"] = accountID
+		configData["cloudflare_api_token"] = parentToken
+	}
+	mustWrite(t, ctx, b, storage, "config", configData)
 
 	// 2. Create a role bound to this token context.
 	mustWrite(t, ctx, b, storage, "role/acc-test", map[string]interface{}{

@@ -76,10 +76,13 @@ func (b *cloudflareBackend) pathCredsRead(ctx context.Context, req *logical.Requ
 		ttl = maxTTL
 	}
 
-	client, err := b.getClient(ctx, req.Storage)
+	// Select the parent credential for this role's token context; fail clearly
+	// if that context is not configured.
+	parentToken, err := config.parentTokenFor(scope.Type)
 	if err != nil {
-		return nil, err
+		return logical.ErrorResponse(err.Error()), nil
 	}
+	client := newCloudflareClient(parentToken)
 
 	// Parse the role's stored policies and resolve permission group names → IDs.
 	// The live permission group catalog is only fetched when a policy actually

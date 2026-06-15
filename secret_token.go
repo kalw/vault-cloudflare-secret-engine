@@ -47,7 +47,7 @@ func (b *cloudflareBackend) secretTokenRevoke(ctx context.Context, req *logical.
 		scope.AccountID = v
 	}
 
-	client, err := b.getClient(ctx, req.Storage)
+	client, err := b.clientForTokenType(ctx, req.Storage, scope.Type)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,6 @@ package cloudflaresecrets
 import (
 	"context"
 	"strings"
-	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -23,9 +22,6 @@ func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend,
 // API tokens.
 type cloudflareBackend struct {
 	*framework.Backend
-
-	lock   sync.RWMutex
-	client *cloudflareClient
 }
 
 func newBackend() *cloudflareBackend {
@@ -47,47 +43,15 @@ func newBackend() *cloudflareBackend {
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{configStoragePath},
 		},
-		Invalidate: b.invalidate,
 	}
 
 	return b
 }
 
-// reset drops the cached client so the next request rebuilds it from the
-// current configuration.
-func (b *cloudflareBackend) reset() {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-	b.client = nil
-}
-
-// invalidate clears the cached client whenever the config changes on another
-// node in an HA cluster.
-func (b *cloudflareBackend) invalidate(ctx context.Context, key string) {
-	if key == configStoragePath {
-		b.reset()
-	}
-}
-
-// getClient returns a cached Cloudflare client, building one from stored
-// configuration on first use.
-func (b *cloudflareBackend) getClient(ctx context.Context, s logical.Storage) (*cloudflareClient, error) {
-	b.lock.RLock()
-	if b.client != nil {
-		client := b.client
-		b.lock.RUnlock()
-		return client, nil
-	}
-	b.lock.RUnlock()
-
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	// Re-check after acquiring the write lock.
-	if b.client != nil {
-		return b.client, nil
-	}
-
+// clientForTokenType loads the config and builds a Cloudflare client using the
+// parent credential for the requested token context (account or user). It fails
+// with a clear error when that context's credentials are not configured.
+func (b *cloudflareBackend) clientForTokenType(ctx context.Context, s logical.Storage, tokenType string) (*cloudflareClient, error) {
 	config, err := getConfig(ctx, s)
 	if err != nil {
 		return nil, err
@@ -96,8 +60,11 @@ func (b *cloudflareBackend) getClient(ctx context.Context, s logical.Storage) (*
 		return nil, errBackendNotConfigured
 	}
 
-	b.client = newCloudflareClient(config.APIToken)
-	return b.client, nil
+	token, err := config.parentTokenFor(tokenType)
+	if err != nil {
+		return nil, err
+	}
+	return newCloudflareClient(token), nil
 }
 
 const backendHelp = `
