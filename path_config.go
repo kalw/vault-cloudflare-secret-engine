@@ -23,12 +23,34 @@ const (
 	defaultMax = 24 * time.Hour
 )
 
-// cloudflareConfig is the persisted backend configuration.
+// cloudflareConfig is the persisted backend configuration. It can hold
+// credentials for the account context, the user context, or both; a role's
+// token_type selects which credential is used.
 type cloudflareConfig struct {
-	AccountID string        `json:"cloudflare_account_id"`
-	APIToken  string        `json:"cloudflare_api_token"`
-	TTL       time.Duration `json:"ttl"`
-	MaxTTL    time.Duration `json:"max_ttl"`
+	AccountID    string        `json:"cloudflare_account_id"`
+	APIToken     string        `json:"cloudflare_api_token"`
+	UserAPIToken string        `json:"cloudflare_user_api_token"`
+	TTL          time.Duration `json:"ttl"`
+	MaxTTL       time.Duration `json:"max_ttl"`
+}
+
+// parentTokenFor returns the configured parent API token for a token context,
+// or an error explaining which credential is missing.
+func (c *cloudflareConfig) parentTokenFor(tokenType string) (string, error) {
+	switch tokenType {
+	case tokenTypeUser:
+		if c.UserAPIToken == "" {
+			return "", fmt.Errorf("user credentials are not configured: set cloudflare_user_api_token on the config to use token_type=user roles")
+		}
+		return c.UserAPIToken, nil
+	case tokenTypeAccount, "":
+		if c.APIToken == "" {
+			return "", fmt.Errorf("account credentials are not configured: set cloudflare_account_id and cloudflare_api_token on the config to use token_type=account roles")
+		}
+		return c.APIToken, nil
+	default:
+		return "", fmt.Errorf("invalid token_type %q", tokenType)
+	}
 }
 
 func pathConfig(b *cloudflareBackend) *framework.Path {
@@ -37,18 +59,24 @@ func pathConfig(b *cloudflareBackend) *framework.Path {
 		Fields: map[string]*framework.FieldSchema{
 			"cloudflare_account_id": {
 				Type:        framework.TypeString,
-				Description: "Cloudflare account ID that owns the generated tokens.",
-				Required:    true,
+				Description: "Cloudflare account ID that owns account-context tokens. Required together with cloudflare_api_token.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name: "Cloudflare Account ID",
 				},
 			},
 			"cloudflare_api_token": {
 				Type:        framework.TypeString,
-				Description: "Parent Cloudflare API token used to mint and revoke tokens. Requires the 'API Tokens Write' permission.",
-				Required:    true,
+				Description: "Parent token for the account context (token_type=account). Needs 'Account · API Tokens · Edit'.",
 				DisplayAttrs: &framework.DisplayAttributes{
 					Name:      "Cloudflare API Token",
+					Sensitive: true,
+				},
+			},
+			"cloudflare_user_api_token": {
+				Type:        framework.TypeString,
+				Description: "Parent token for the user context (token_type=user). Needs 'User · API Tokens · Edit'.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Name:      "Cloudflare User API Token",
 					Sensitive: true,
 				},
 			},
@@ -92,10 +120,11 @@ func (b *cloudflareBackend) pathConfigRead(ctx context.Context, req *logical.Req
 
 	return &logical.Response{
 		Data: map[string]interface{}{
-			"cloudflare_account_id": config.AccountID,
-			"cloudflare_api_token":  maskToken(config.APIToken),
-			"ttl":                   int64(config.TTL.Seconds()),
-			"max_ttl":               int64(config.MaxTTL.Seconds()),
+			"cloudflare_account_id":     config.AccountID,
+			"cloudflare_api_token":      maskToken(config.APIToken),
+			"cloudflare_user_api_token": maskToken(config.UserAPIToken),
+			"ttl":                       int64(config.TTL.Seconds()),
+			"max_ttl":                   int64(config.MaxTTL.Seconds()),
 		},
 	}, nil
 }
@@ -116,14 +145,12 @@ func (b *cloudflareBackend) pathConfigWrite(ctx context.Context, req *logical.Re
 
 	if v, ok := d.GetOk("cloudflare_account_id"); ok {
 		config.AccountID = v.(string)
-	} else if createOperation {
-		return logical.ErrorResponse("missing cloudflare_account_id"), nil
 	}
-
 	if v, ok := d.GetOk("cloudflare_api_token"); ok {
 		config.APIToken = v.(string)
-	} else if createOperation {
-		return logical.ErrorResponse("missing cloudflare_api_token"), nil
+	}
+	if v, ok := d.GetOk("cloudflare_user_api_token"); ok {
+		config.UserAPIToken = v.(string)
 	}
 
 	if v, ok := d.GetOk("ttl"); ok {
@@ -131,15 +158,24 @@ func (b *cloudflareBackend) pathConfigWrite(ctx context.Context, req *logical.Re
 	} else if createOperation {
 		config.TTL = defaultTTL
 	}
-
 	if v, ok := d.GetOk("max_ttl"); ok {
 		config.MaxTTL = time.Duration(v.(int)) * time.Second
 	} else if createOperation {
 		config.MaxTTL = defaultMax
 	}
-
 	if config.MaxTTL > 0 && config.TTL > config.MaxTTL {
 		return logical.ErrorResponse("ttl cannot exceed max_ttl"), nil
+	}
+
+	// The account context needs both the account ID and its token.
+	if (config.AccountID == "") != (config.APIToken == "") {
+		return logical.ErrorResponse("account credentials require both cloudflare_account_id and cloudflare_api_token"), nil
+	}
+	// At least one usable context (account and/or user) must be configured.
+	hasAccount := config.AccountID != "" && config.APIToken != ""
+	hasUser := config.UserAPIToken != ""
+	if !hasAccount && !hasUser {
+		return logical.ErrorResponse("configure account credentials (cloudflare_account_id + cloudflare_api_token) and/or a user credential (cloudflare_user_api_token)"), nil
 	}
 
 	entry, err := logical.StorageEntryJSON(configStoragePath, config)
@@ -150,18 +186,11 @@ func (b *cloudflareBackend) pathConfigWrite(ctx context.Context, req *logical.Re
 		return nil, err
 	}
 
-	// Drop the cached client so subsequent calls pick up the new credentials.
-	b.reset()
-
 	return nil, nil
 }
 
 func (b *cloudflareBackend) pathConfigDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, configStoragePath)
-	if err == nil {
-		b.reset()
-	}
-	return nil, err
+	return nil, req.Storage.Delete(ctx, configStoragePath)
 }
 
 func getConfig(ctx context.Context, s logical.Storage) (*cloudflareConfig, error) {

@@ -26,18 +26,33 @@ management tool.
     By default, the secrets engine will mount at the name of the engine. To
     enable the secrets engine at a different path, use the `-path` argument.
 
-1. Configure the backend with user credentials that will be able to interact with the cloudflare API and create tokens.
+1. Configure the backend with the parent credentials used to mint and revoke tokens.
+
+    The config holds a credential per **token context** — provide account
+    credentials, user credentials, or both. A role's `token_type` then selects
+    which one is used, and generation fails if the matching context is not
+    configured.
 
     ```text
-    $ vault write cloudflare/config cloudflare_account_id="<account-id>" cloudflare_api_token="<parent-api-token>"
-    Success! Data written to: cloudflare/config
+    # account context (token_type=account)
+    $ vault write cloudflare/config \
+        cloudflare_account_id="<account-id>" \
+        cloudflare_api_token="<account-parent-token>"
+
+    # user context (token_type=user) — can be set instead of, or alongside, the above
+    $ vault write cloudflare/config \
+        cloudflare_user_api_token="<user-parent-token>"
     ```
 
-    `cloudflare_api_token` is a parent Cloudflare API token that is allowed to
-    mint and revoke account-owned tokens (it needs the **API Tokens Write**
-    permission). It is stored seal-wrapped and never returned in plaintext.
-    Optional `ttl` and `max_ttl` fields control the lease duration of generated
-    tokens (defaults: `1h` / `24h`).
+    | Field | Context | Cloudflare permission the parent token needs |
+    | --- | --- | --- |
+    | `cloudflare_account_id` + `cloudflare_api_token` | account | Account · API Tokens · Edit |
+    | `cloudflare_user_api_token` | user | User · API Tokens · Edit |
+
+    At least one context must be configured (`cloudflare_account_id` and
+    `cloudflare_api_token` must be set together). Tokens are stored seal-wrapped
+    and never returned in plaintext. Optional `ttl` and `max_ttl` fields control
+    the lease duration of generated tokens (defaults: `1h` / `24h`).
 
 ### Roles
 
@@ -46,7 +61,9 @@ Tokens are generated from **roles**. A role defines two things:
 - **`token_type`** — the Cloudflare token context: `account` (default; service-tied,
   survives an employee leaving) or `user` (tied to the individual that owns the
   parent API token). Some permission groups and operations are only available in
-  one context or the other.
+  one context or the other. The matching credential must be configured (see
+  Setup) — a `token_type=user` role fails unless `cloudflare_user_api_token` is
+  set, and likewise for the account context.
 - **`policies`** — a JSON array that maps 1:1 to Cloudflare's token policy model.
   Each policy has an `effect` (`allow`/`deny`, default `allow`), a list of
   `permission_groups`, and a `resources` map. This is where the token's ACL and
