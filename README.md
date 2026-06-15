@@ -1,5 +1,16 @@
 # vault-cloudflare-secret-engine
 
+[![CI](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![Release](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/release.yml/badge.svg)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/kalw/vault-cloudflare-secret-engine?sort=semver&logo=github)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+[![Go version](https://img.shields.io/github/go-mod/go-version/kalw/vault-cloudflare-secret-engine?logo=go)](go.mod)
+
+**Platforms** — cross-compiled in CI and published each release (`amd64` · `arm64`):
+[![linux](https://img.shields.io/badge/linux-amd64%20%C2%B7%20arm64-FCC624?logo=linux&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+[![macOS](https://img.shields.io/badge/macOS-amd64%20%C2%B7%20arm64-000000?logo=apple&logoColor=white)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+[![FreeBSD](https://img.shields.io/badge/FreeBSD-amd64%20%C2%B7%20arm64-AB2B28?logo=freebsd&logoColor=white)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+[![OpenBSD](https://img.shields.io/badge/OpenBSD-amd64%20%C2%B7%20arm64-F2CA30?logo=openbsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+
 This plugin will allow you to create a secret backend that will use the cloudflare API to generate dynamic short lived cloudflare token.  Usage can be restricted using the highly customizable Vault ACL system.
 
 ## Install (pre-built binary)
