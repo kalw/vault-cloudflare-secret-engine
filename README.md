@@ -6,19 +6,23 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/kalw/vault-cloudflare-secret-engine?logo=go)](go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kalw/vault-cloudflare-secret-engine)](https://goreportcard.com/report/github.com/kalw/vault-cloudflare-secret-engine)
 
-**Platforms** — cross-compiled in CI and published each release (`amd64` · `arm64`):
-[![linux](https://img.shields.io/badge/linux-amd64%20%C2%B7%20arm64-FCC624?logo=linux&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![macOS](https://img.shields.io/badge/macOS-amd64%20%C2%B7%20arm64-000000?logo=apple&logoColor=white)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![FreeBSD](https://img.shields.io/badge/FreeBSD-amd64%20%C2%B7%20arm64-AB2B28?logo=freebsd&logoColor=white)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![OpenBSD](https://img.shields.io/badge/OpenBSD-amd64%20%C2%B7%20arm64-F2CA30?logo=openbsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+**Platforms** — cross-compiled in CI:
 
-This plugin will allow you to create a secret backend that will use the cloudflare API to generate dynamic short lived cloudflare token.  Usage can be restricted using the highly customizable Vault ACL system.
+| OS | amd64 | arm64 |
+|---|---|---|
+| ![linux](https://img.shields.io/badge/linux-FCC624?logo=linux&logoColor=black) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![FreeBSD](https://img.shields.io/badge/FreeBSD-AB2B28?logo=freebsd&logoColor=white) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![OpenBSD](https://img.shields.io/badge/OpenBSD-F2CA30?logo=openbsd&logoColor=black) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+
+A Vault secrets engine that issues short-lived Cloudflare API tokens on demand:
+
+- Tokens are minted via the Cloudflare API and automatically revoked when the Vault lease expires
+- Supports both account-scoped and user-scoped token contexts
+- Full Cloudflare token policy model — permission groups, resource scopes, IP restrictions
+- Access gated by standard Vault ACLs
 
 ## Install (pre-built binary)
-
-Each release publishes the bare plugin binary for the common Vault server and
-developer architectures (`linux`, `darwin`, `freebsd`, `openbsd` × `amd64`,
-`arm64`) plus a `checksums.txt`.
 
 1. Download the asset matching your Vault server from the
    [latest release](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest),
@@ -34,8 +38,7 @@ developer architectures (`linux`, `darwin`, `freebsd`, `openbsd` × `amd64`,
      /etc/vault/plugins/vault-cloudflare-secret-engine
    ```
 
-3. Register it with the catalog using the SHA-256 from `checksums.txt`
-   (Vault hashes the file at `plugin_directory/<command>`):
+3. Register the plugin and enable the secrets engine:
 
    ```bash
    SHASUM=$(sha256sum /etc/vault/plugins/vault-cloudflare-secret-engine | cut -d ' ' -f1)
@@ -48,28 +51,6 @@ Check a binary's build metadata at any time with
 `vault-cloudflare-secret-engine --version`.
 
 ### Setup
-
-Most secrets engines must be configured in advance before they can perform their
-functions. These steps are usually completed by an operator or configuration
-management tool.
-
-1. Register the plugin with the catalog
-
-    ```text
-    $ SHASUM=$(shasum -a 256 vault-cloudflare-secret-engine | cut -d " " -f1)
-    $ vault write sys/plugins/catalog/vault-cloudflare-secret-engine sha_256="$SHASUM" command="vault-cloudflare-secret-engine" 
-    Success! Data written to: sys/plugins/catalog/vault-cloudflare-secret-engine
-    ```
-
-1. Enable the cloudflare secrets engine:
-
-    ```text
-    $ vault secrets enable -path="cloudflare" -plugin-name="vault-cloudflare-secret-engine" plugin
-    Success! Enabled the vault-cloudflare-secret-engine plugin at: cloudflare/
-    ```
-
-    By default, the secrets engine will mount at the name of the engine. To
-    enable the secrets engine at a different path, use the `-path` argument.
 
 1. Configure the backend with the parent credentials used to mint and revoke tokens.
 
@@ -200,13 +181,7 @@ system restricts which identities may use which roles.
 
 ```bash
 docker build -t vault-plugin .
-docker run --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234' -p 1234:1234 vault-plugin
-```
-
-To build just the plugin binary for the host platform:
-
-```bash
-go build -o vault-cloudflare-secret-engine ./cmd/vault-cloudflare-secret-engine
+docker run --rm -d --cap-add=IPC_LOCK -e 'VAULT_DEV_ROOT_TOKEN_ID=myroot' -e 'VAULT_DEV_LISTEN_ADDRESS=0.0.0.0:1234' -p 1234:1234 vault-plugin
 ```
 
 ### Configure the local vault
