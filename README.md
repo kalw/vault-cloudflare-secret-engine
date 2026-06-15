@@ -6,11 +6,15 @@
 [![Go version](https://img.shields.io/github/go-mod/go-version/kalw/vault-cloudflare-secret-engine?logo=go)](go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kalw/vault-cloudflare-secret-engine)](https://goreportcard.com/report/github.com/kalw/vault-cloudflare-secret-engine)
 
-**Platforms** — cross-compiled in CI and published each release (`amd64` · `arm64`):
-[![linux](https://img.shields.io/badge/linux-amd64%20%C2%B7%20arm64-FCC624?logo=linux&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![macOS](https://img.shields.io/badge/macOS-amd64%20%C2%B7%20arm64-000000?logo=apple&logoColor=white)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![FreeBSD](https://img.shields.io/badge/FreeBSD-amd64%20%C2%B7%20arm64-AB2B28?logo=freebsd&logoColor=white)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![OpenBSD](https://img.shields.io/badge/OpenBSD-amd64%20%C2%B7%20arm64-F2CA30?logo=openbsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
+**Platforms** — cross-compiled in CI (`amd64` · `arm64`):
+[![linux/amd64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Famd64&label=linux%2Famd64&logo=linux&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![linux/arm64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Farm64&label=linux%2Farm64&logo=linux&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![macOS/amd64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Famd64&label=macOS%2Famd64&logo=apple&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![macOS/arm64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Farm64&label=macOS%2Farm64&logo=apple&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![freebsd/amd64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Famd64&label=freebsd%2Famd64&logo=freebsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![freebsd/arm64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Farm64&label=freebsd%2Farm64&logo=freebsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![openbsd/amd64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Famd64&label=openbsd%2Famd64&logo=openbsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![openbsd/arm64](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Farm64&label=openbsd%2Farm64&logo=openbsd&logoColor=black)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
 
 This plugin will allow you to create a secret backend that will use the cloudflare API to generate dynamic short lived cloudflare token.  Usage can be restricted using the highly customizable Vault ACL system.
 
