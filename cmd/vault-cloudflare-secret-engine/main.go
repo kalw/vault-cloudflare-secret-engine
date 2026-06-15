@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	cloudflaresecrets "github.com/arcdigital/vault-cloudflare-secret-engine"
+	cloudflaresecrets "github.com/kalw/vault-cloudflare-secret-engine"
 
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"

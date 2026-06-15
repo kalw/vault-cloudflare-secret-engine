@@ -1,4 +1,4 @@
-module github.com/arcdigital/vault-cloudflare-secret-engine
+module github.com/kalw/vault-cloudflare-secret-engine
 
 go 1.25.7
 
