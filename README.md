@@ -34,15 +34,16 @@ management tool.
     configured.
 
     ```text
-    # account context (token_type=account)
     $ vault write cloudflare/config \
         cloudflare_account_id="<account-id>" \
-        cloudflare_api_token="<account-parent-token>"
-
-    # user context (token_type=user) — can be set instead of, or alongside, the above
-    $ vault write cloudflare/config \
+        cloudflare_api_token="<account-parent-token>" \
         cloudflare_user_api_token="<user-parent-token>"
+    Success! Data written to: cloudflare/config
     ```
+
+    Configure both contexts as above, or just the one you need — set only
+    `cloudflare_account_id` + `cloudflare_api_token` for account tokens, or only
+    `cloudflare_user_api_token` for user tokens.
 
     | Field | Context | Cloudflare permission the parent token needs |
     | --- | --- | --- |
@@ -159,7 +160,13 @@ SHASUM=$(docker exec "$CID" sha256sum /vault/plugins/vault-cloudflare-secret-eng
 
 vault write sys/plugins/catalog/vault-cloudflare-secret-engine sha_256="$SHASUM" command="vault-cloudflare-secret-engine"
 vault secrets enable -path="cloudflare" -plugin-name="vault-cloudflare-secret-engine" plugin
-vault write cloudflare/config cloudflare_account_id="<account-id>" cloudflare_api_token="<parent-api-token>"
+
+# Configure either or both contexts. GitHub Actions secrets are write-only, so
+# reuse the same values locally (e.g. the $CF_* env vars you set them from).
+vault write cloudflare/config \
+  cloudflare_account_id="$CF_ACCOUNT" \
+  cloudflare_api_token="$CF_TOKEN" \
+  cloudflare_user_api_token="$CF_TOKEN_USER"
 ```
 
 > Tip: `-dev-plugin-dir=/vault/plugins` on the dev server auto-registers plugins
