@@ -23,14 +23,14 @@ jobs:
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache: true
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           version: "~> v2"
           args: release --clean
@@ -44,7 +44,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Compute next version (Conventional Commits)
@@ -62,12 +62,12 @@ jobs:
           # point at the built commit, which annotated tags from the action break.
           git tag "${{ steps.tag.outputs.new_tag }}"
           git push origin "${{ steps.tag.outputs.new_tag }}"
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         if: steps.tag.outputs.new_tag != ''
         with:
           go-version: "1.25"
           cache: true
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         if: steps.tag.outputs.new_tag != ''
         with:
           version: "~> v2"
