@@ -5,3 +5,6 @@
 # Go build/test artifacts
 *.test
 *.out
+
+# GoReleaser build output
+/dist/

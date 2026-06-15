@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	cloudflaresecrets "github.com/arcdigital/vault-cloudflare-secret-engine"
@@ -10,7 +11,22 @@ import (
 	"github.com/hashicorp/vault/sdk/plugin"
 )
 
+// Build metadata, injected by GoReleaser via -ldflags at release time.
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+)
+
 func main() {
+	if len(os.Args) == 2 {
+		switch os.Args[1] {
+		case "--version", "-version", "version":
+			fmt.Printf("vault-cloudflare-secret-engine %s (commit %s, built %s)\n", version, commit, date)
+			return
+		}
+	}
+
 	apiClientMeta := &api.PluginAPIClientMeta{}
 	flags := apiClientMeta.FlagSet()
 	if err := flags.Parse(os.Args[1:]); err != nil {

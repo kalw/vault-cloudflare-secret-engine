@@ -1,0 +1,77 @@
+# GoReleaser configuration. Produces the bare plugin binary for the common
+# Vault server / developer architectures plus a checksums.txt whose SHA-256 is
+# exactly what `vault write sys/plugins/catalog ... sha_256=` expects.
+# Docs: https://goreleaser.com
+version: 2
+
+project_name: vault-cloudflare-secret-engine
+
+builds:
+  - id: plugin
+    main: ./cmd/vault-cloudflare-secret-engine
+    binary: vault-cloudflare-secret-engine
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .Commit }}
+      - -X main.date={{ .Date }}
+    goos:
+      - linux
+      - darwin
+      - freebsd
+      - openbsd
+    goarch:
+      - amd64
+      - arm64
+
+# Ship the raw binaries (no tarball) so operators can hash and register them
+# directly. One asset per OS/arch.
+archives:
+  - id: binaries
+    formats:
+      - binary
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Others
+      order: 999
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^style:"
+      - "^refactor:"
+      - Merge pull request
+      - Merge branch
+
+release:
+  github:
+    owner: kalw
+    name: vault-cloudflare-secret-engine
+  prerelease: auto
+  draft: false
+  header: |
+    Pre-built `vault-cloudflare-secret-engine` plugin binaries.
+
+    Download the asset matching your Vault server's OS/arch, verify it against
+    `checksums.txt`, then register the SHA-256 with Vault's plugin catalog. See
+    the README "Install (pre-built binary)" section for the exact steps.
