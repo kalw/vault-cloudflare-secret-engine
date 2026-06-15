@@ -133,11 +133,20 @@ In a second terminal window...
 ```bash
 export VAULT_ADDR='http://0.0.0.0:1234'
 vault login myroot
-SHASUM=$(shasum -a 256 vault-cloudflare-secret-engine | cut -d " " -f1)
-vault write sys/plugins/catalog/vault-cloudflare-secret-engine   sha_256="$SHASUM"   command="vault-cloudflare-secret-engine"
+
+# The Docker image builds the plugin internally, so the SHA-256 must be taken
+# from the binary inside the container (Vault hashes that exact file). Hashing a
+# separately built host binary will fail with "checksums did not match".
+CID=$(docker ps -q --filter ancestor=vault-plugin | head -1)
+SHASUM=$(docker exec "$CID" sha256sum /vault/plugins/vault-cloudflare-secret-engine | cut -d ' ' -f1)
+
+vault write sys/plugins/catalog/vault-cloudflare-secret-engine sha_256="$SHASUM" command="vault-cloudflare-secret-engine"
 vault secrets enable -path="cloudflare" -plugin-name="vault-cloudflare-secret-engine" plugin
 vault write cloudflare/config cloudflare_account_id="<account-id>" cloudflare_api_token="<parent-api-token>"
 ```
+
+> Tip: `-dev-plugin-dir=/vault/plugins` on the dev server auto-registers plugins
+> and skips the manual `sha_256` registration entirely — handy for iterating.
 
 ### Tests
 
