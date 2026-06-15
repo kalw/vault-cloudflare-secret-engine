@@ -54,6 +54,14 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release_branches: main
           default_bump: false
+          dry_run: true # compute only; we create a lightweight tag ourselves
+      - name: Create and push tag
+        if: steps.tag.outputs.new_tag != ''
+        run: |
+          # A lightweight tag on HEAD — GoReleaser requires the current tag to
+          # point at the built commit, which annotated tags from the action break.
+          git tag "${{ steps.tag.outputs.new_tag }}"
+          git push origin "${{ steps.tag.outputs.new_tag }}"
       - uses: actions/setup-go@v5
         if: steps.tag.outputs.new_tag != ''
         with:
