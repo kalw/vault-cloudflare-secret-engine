@@ -1,49 +1,69 @@
 name: Release
 
-# On every push to main, derive the next semver from Conventional Commits since
-# the last tag. If a releasable change exists (feat/fix/breaking), tag it and
-# publish binaries with GoReleaser. Docs/chore/ci-only pushes produce no release.
+# Two ways to cut a release:
+#   * push a v* tag          -> build that exact tag (manual / seed releases)
+#   * push to main           -> derive the next semver from Conventional Commits
+#                               since the last tag, create it, and build it
+# Docs/chore/ci-only pushes to main produce no release.
 on:
   push:
     branches: [main]
+    tags: ["v*"]
 
 permissions:
   contents: write
 
 concurrency:
-  group: release
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
-  release:
+  # Path 1 — a v* tag was pushed directly. Build that tag.
+  tagged:
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # full history + tags for version computation
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # Path 2 — push to main. Compute the next version from Conventional Commits,
+  # tag it, and release in the same job (a GITHUB_TOKEN-pushed tag does not
+  # itself trigger the `tagged` job, so there is no double build).
+  auto:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Compute next version (Conventional Commits)
         id: tag
         uses: mathieudutour/github-tag-action@v6.2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           release_branches: main
-          default_bump: false # no bump unless feat/fix/breaking commits exist
-
-      - name: Set up Go
+          default_bump: false
+      - uses: actions/setup-go@v5
         if: steps.tag.outputs.new_tag != ''
-        uses: actions/setup-go@v5
         with:
           go-version: "1.25"
           cache: true
-
-      - name: Run GoReleaser
+      - uses: goreleaser/goreleaser-action@v6
         if: steps.tag.outputs.new_tag != ''
-        uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # The tag was just created on HEAD; point GoReleaser at it explicitly.
           GORELEASER_CURRENT_TAG: ${{ steps.tag.outputs.new_tag }}

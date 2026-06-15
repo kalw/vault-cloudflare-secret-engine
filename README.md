@@ -254,6 +254,7 @@ cross-compiled binaries and `checksums.txt` to a GitHub Release.
 | `feat!:` / `fix!:` / `BREAKING CHANGE:` footer | major (`X.0.0`) |
 | `docs:`, `chore:`, `ci:`, `refactor:`, `test:`, `style:` | no release |
 
-To seed the first release at a specific version, push a tag manually once (e.g.
-`git tag v1.0.0 && git push origin v1.0.0`); subsequent bumps follow from commit
-messages.
+You can also cut a release at any specific version by pushing a `v*` tag
+directly (e.g. `git tag v1.0.0 && git push origin v1.0.0`) — that builds and
+publishes that exact tag. Use this to seed the first release; subsequent bumps
+then follow automatically from commit messages.
