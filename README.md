@@ -2,6 +2,39 @@
 
 This plugin will allow you to create a secret backend that will use the cloudflare API to generate dynamic short lived cloudflare token.  Usage can be restricted using the highly customizable Vault ACL system.
 
+## Install (pre-built binary)
+
+Each release publishes the bare plugin binary for the common Vault server and
+developer architectures (`linux`/`darwin`, `amd64`/`arm64`) plus a
+`checksums.txt`.
+
+1. Download the asset matching your Vault server from the
+   [latest release](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest),
+   e.g. `vault-cloudflare-secret-engine_<version>_linux_amd64`, together with
+   `checksums.txt`.
+
+2. Verify and install it into Vault's `plugin_directory` under the plugin's
+   command name:
+
+   ```bash
+   sha256sum --ignore-missing -c checksums.txt
+   install -m 0755 vault-cloudflare-secret-engine_<version>_linux_amd64 \
+     /etc/vault/plugins/vault-cloudflare-secret-engine
+   ```
+
+3. Register it with the catalog using the SHA-256 from `checksums.txt`
+   (Vault hashes the file at `plugin_directory/<command>`):
+
+   ```bash
+   SHASUM=$(sha256sum /etc/vault/plugins/vault-cloudflare-secret-engine | cut -d ' ' -f1)
+   vault write sys/plugins/catalog/vault-cloudflare-secret-engine \
+     sha_256="$SHASUM" command="vault-cloudflare-secret-engine"
+   vault secrets enable -path="cloudflare" -plugin-name="vault-cloudflare-secret-engine" plugin
+   ```
+
+Check a binary's build metadata at any time with
+`vault-cloudflare-secret-engine --version`.
+
 ### Setup
 
 Most secrets engines must be configured in advance before they can perform their
@@ -205,3 +238,22 @@ go test -run TestAcceptance -v
 The `user` subtest is skipped unless `CLOUDFLARE_USER_API_TOKEN` is set. Both
 cases default to the same account-scoped policy, since account-scoped permission
 groups are valid in user-owned tokens.
+
+### Releases
+
+Releases are automated. Every push to `main` is analyzed with
+[Conventional Commits](https://www.conventionalcommits.org/): the next
+[semver](https://semver.org/) is derived from the commit types since the last
+tag, the tag is created, and [GoReleaser](https://goreleaser.com) publishes the
+cross-compiled binaries and `checksums.txt` to a GitHub Release.
+
+| Commit prefix | Version bump |
+| --- | --- |
+| `fix:` | patch (`x.y.Z`) |
+| `feat:` | minor (`x.Y.0`) |
+| `feat!:` / `fix!:` / `BREAKING CHANGE:` footer | major (`X.0.0`) |
+| `docs:`, `chore:`, `ci:`, `refactor:`, `test:`, `style:` | no release |
+
+To seed the first release at a specific version, push a tag manually once (e.g.
+`git tag v1.0.0 && git push origin v1.0.0`); subsequent bumps follow from commit
+messages.
