@@ -139,3 +139,25 @@ vault write sys/plugins/catalog/vault-cloudflare-secret-engine   sha_256="$SHASU
 vault secrets enable -path="cloudflare" -plugin-name="vault-cloudflare-secret-engine" plugin
 vault write cloudflare/config cloudflare_account_id="<account-id>" cloudflare_api_token="<parent-api-token>"
 ```
+
+### Tests
+
+Unit tests run with no external dependencies:
+
+```bash
+go test ./...
+```
+
+There is also an acceptance test that mints and revokes a real token against
+the live Cloudflare API. It is skipped unless `VAULT_ACC` is set:
+
+```bash
+export VAULT_ACC=1
+export CLOUDFLARE_ACCOUNT_ID="<account-id>"
+export CLOUDFLARE_API_TOKEN="<parent-api-token>"   # needs "API Tokens Write"
+# Optional: override the role's policies (defaults to a low-privilege
+# "Account Settings Read" policy scoped to the account).
+# export CLOUDFLARE_TEST_POLICIES='[{"effect":"allow","permission_groups":[{"name":"DNS Read"}],"resources":{"com.cloudflare.api.account.zone.<zone-id>":"*"}}]'
+
+go test -run TestAcceptance -v
+```
