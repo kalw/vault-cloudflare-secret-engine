@@ -5,8 +5,8 @@ This plugin will allow you to create a secret backend that will use the cloudfla
 ## Install (pre-built binary)
 
 Each release publishes the bare plugin binary for the common Vault server and
-developer architectures (`linux`/`darwin`, `amd64`/`arm64`) plus a
-`checksums.txt`.
+developer architectures (`linux`, `darwin`, `freebsd`, `openbsd` × `amd64`,
+`arm64`) plus a `checksums.txt`.
 
 1. Download the asset matching your Vault server from the
    [latest release](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest),

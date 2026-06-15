@@ -22,6 +22,8 @@ builds:
     goos:
       - linux
       - darwin
+      - freebsd
+      - openbsd
     goarch:
       - amd64
       - arm64
