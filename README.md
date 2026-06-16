@@ -5,6 +5,7 @@
 [![Latest release](https://img.shields.io/github/v/release/kalw/vault-cloudflare-secret-engine?sort=semver&logo=github)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
 [![Go version](https://img.shields.io/github/go-mod/go-version/kalw/vault-cloudflare-secret-engine?logo=go)](go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kalw/vault-cloudflare-secret-engine)](https://goreportcard.com/report/github.com/kalw/vault-cloudflare-secret-engine)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENCE.md)
 
 **Platforms** — cross-compiled in CI:
 
