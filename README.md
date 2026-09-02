@@ -21,6 +21,7 @@ A Vault secrets engine that issues short-lived Cloudflare API tokens on demand:
 - Tokens are minted via the Cloudflare API and automatically revoked when the Vault lease expires
 - Supports both account-scoped and user-scoped token contexts
 - Full Cloudflare token policy model — permission groups, resource scopes, IP restrictions
+- Optional S3-compatible R2 credentials derived from the token, for R2's S3 API
 - Access gated by standard Vault ACLs
 
 ## Install (pre-built binary)
@@ -96,6 +97,10 @@ Tokens are generated from **roles**. A role defines two things:
   Each policy has an `effect` (`allow`/`deny`, default `allow`), a list of
   `permission_groups`, and a `resources` map. This is where the token's ACL and
   scope live.
+
+A role may also set **`r2_s3_credentials`** (default `false`) to have `creds`
+responses carry a derived R2 S3 keypair — see
+[R2 S3 credentials](#r2-s3-credentials).
 
 Permission groups may be referenced by `id` **or** by `name` — names are
 resolved against Cloudflare's live permission-group list when a token is
@@ -201,8 +206,22 @@ r2_endpoint             https://<account-id>.r2.cloudflarestorage.com
 ```
 
 Point any S3 client (region `auto`) at `r2_endpoint` with that keypair. The
-credentials are the token, so revoking the lease deletes the token and
-invalidates them.
+keypair is not a second secret: `r2_access_key_id` is the token's ID and
+`r2_secret_access_key` is the hex SHA-256 of the token value, which is
+Cloudflare's documented scheme for using an API token against the S3 API. So
+revoking the lease deletes the token and invalidates the keypair at the same
+time, and a renewal keeps the same keypair valid.
+
+`r2_endpoint` is built from the account ID, taken from the role's token context
+and falling back to the configured `cloudflare_account_id`. It is omitted from
+the response when neither is available (a `token_type=user` role on a mount
+configured with only `cloudflare_user_api_token`) — the token and keypair are
+still returned, and the endpoint must then be supplied by the client.
+
+The role's `policies` still decide what the credentials can do: the parent token
+must be able to grant an R2 permission group (e.g. *Workers R2 Storage Bucket
+Item Write*), and setting `r2_s3_credentials=true` on a role whose policies
+grant no R2 permission yields a keypair that R2 rejects.
 
 ### Rotating the parent token
 
@@ -247,6 +266,10 @@ Read this before pointing the engine at a production account.
 - **Rotate the parent token** after seeding it (see above) and on a schedule, so
   a leaked or operator-retained bootstrap value does not stay valid
   indefinitely.
+- **The R2 keypair is not an extra secret boundary.** `r2_secret_access_key` is a
+  deterministic function of the token value, so anyone holding a token issued by
+  this engine can derive it whether or not the role opted in — and revoking the
+  lease is what invalidates both. Treat the keypair as the token itself.
 
 ## Local Development
 
@@ -318,6 +341,24 @@ go test -run TestAcceptance -v
 The `user` subtest is skipped unless `CLOUDFLARE_USER_API_TOKEN` is set. Both
 cases default to the same account-scoped policy, since account-scoped permission
 groups are valid in user-owned tokens.
+
+A separate acceptance test mints an R2-scoped token against the live Cloudflare
+API and checks the derived keypair. It needs R2 enabled
+on the account and a parent token that can grant an R2 storage write group, and
+is skipped unless `CLOUDFLARE_TEST_R2` is set:
+
+```bash
+export VAULT_ACC=1
+export CLOUDFLARE_TEST_R2=1
+export CLOUDFLARE_ACCOUNT_ID="<account-id>"
+export CLOUDFLARE_API_TOKEN="<parent-account-token>"
+
+go test -run TestAcceptance_R2Credentials -v
+```
+
+It asserts the shape and derivation of the returned keypair (it does not put
+objects in a bucket); use the credentials against a real bucket out-of-band to
+confirm R2 accepts them.
 
 ### Releases
 
