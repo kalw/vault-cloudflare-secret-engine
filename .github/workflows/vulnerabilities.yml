@@ -1,0 +1,25 @@
+name: Vulnerabilities
+
+# govulncheck reports known vulnerabilities (Go vulnerability database) that
+# are actually reachable from the plugin's code; the weekly run catches new
+# advisories against unchanged code.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: golang/govulncheck-action@v1
+        with:
+          go-version-file: go.mod
+          go-package: ./...
