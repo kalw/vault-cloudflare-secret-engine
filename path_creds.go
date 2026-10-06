@@ -2,6 +2,8 @@ package cloudflaresecrets
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"time"
@@ -113,8 +115,15 @@ func (b *cloudflareBackend) pathCredsRead(ctx context.Context, req *logical.Requ
 	}
 	backstop += expiryBackstopBuffer
 
+	// A random suffix keeps names unique for same-second mints; the timestamp
+	// stays for operator forensics in the Cloudflare dashboard.
+	suffix := make([]byte, 4)
+	if _, err := rand.Read(suffix); err != nil {
+		return nil, fmt.Errorf("generating token name suffix: %w", err)
+	}
+
 	tokenReq := &createTokenRequest{
-		Name:      fmt.Sprintf("vault-%s-%d", roleName, time.Now().Unix()),
+		Name:      fmt.Sprintf("vault-%s-%d-%s", roleName, time.Now().Unix(), hex.EncodeToString(suffix)),
 		Policies:  policies,
 		ExpiresOn: time.Now().UTC().Add(backstop).Format(time.RFC3339),
 	}

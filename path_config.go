@@ -278,11 +278,21 @@ func (b *cloudflareBackend) pathConfigRotateRoot(ctx context.Context, req *logic
 	}
 
 	entry, err := logical.StorageEntryJSON(configStoragePath, config)
-	if err != nil {
-		return nil, err
+	if err == nil {
+		err = req.Storage.Put(ctx, entry)
 	}
-	if err := req.Storage.Put(ctx, entry); err != nil {
-		return nil, err
+	if err != nil {
+		// The Cloudflare-side roll already happened: the old value is dead and
+		// the new one exists only in this process. Without a successful write,
+		// the stored parent credential is now invalid. Be explicit about
+		// recovery instead of failing opaquely.
+		b.Logger().Error("parent token was rolled at Cloudflare but the new value could not be persisted",
+			"token_type", tokenType, "token_id", tokenID, "error", err)
+		return nil, fmt.Errorf(
+			"parent token (id %s) was rolled at Cloudflare but persisting the new value failed: %w. "+
+				"The stored %s credential is now invalid: retry this rotation immediately (it rolls again and persists), "+
+				"or mint a fresh parent token in the Cloudflare dashboard and write it to the config endpoint",
+			tokenID, err, tokenType)
 	}
 	b.Logger().Info("rotated parent cloudflare token", "token_type", tokenType, "token_id", tokenID)
 

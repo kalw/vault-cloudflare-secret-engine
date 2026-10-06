@@ -109,10 +109,14 @@ func (e *cfError) isNotFound() bool {
 
 // idempotent reports whether a request method is safe to retry after a
 // transient failure without risking a duplicate side effect. POST is excluded
-// because a lost response could hide a token that was actually created.
+// because a lost response could hide a token that was actually created, and
+// PUT is excluded because our only PUT (rolling a token's value) generates a
+// new secret on every call: retrying an ambiguous failure could invalidate a
+// value that was already rolled and returned. 429 responses are still retried
+// for every method, since a rate-limited request was not processed.
 func idempotent(method string) bool {
 	switch method {
-	case http.MethodGet, http.MethodDelete, http.MethodPut, http.MethodHead:
+	case http.MethodGet, http.MethodDelete, http.MethodHead:
 		return true
 	default:
 		return false
