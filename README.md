@@ -1,20 +1,29 @@
 # vault-cloudflare-secret-engine
 
-[![CI](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
-[![Release](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/release.yml/badge.svg)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/release.yml)
-[![Latest release](https://img.shields.io/github/v/release/kalw/vault-cloudflare-secret-engine?sort=semver&logo=github)](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest)
-[![Go version](https://img.shields.io/github/go-mod/go-version/kalw/vault-cloudflare-secret-engine?logo=go)](go.mod)
+[![CI](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml)
+[![Release](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/release.yml/badge.svg)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/Believe-SA/vault-cloudflare-secret-engine?sort=semver&logo=github)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/releases/latest)
+[![Go version](https://img.shields.io/github/go-mod/go-version/Believe-SA/vault-cloudflare-secret-engine?logo=go)](go.mod)
 [![Go Report Card](https://goreportcard.com/badge/github.com/kalw/vault-cloudflare-secret-engine)](https://goreportcard.com/report/github.com/kalw/vault-cloudflare-secret-engine)
 [![License](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENCE.md)
+
+**Vault compatibility** — the compiled plugin is registered, mounted and exercised inside a real Vault server in CI:
+
+| Vault | Status |
+|---|---|
+| 2.1.x | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Vault+2.1.1&label=2.1.1)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| 2.0.x | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Vault+2.0.4&label=2.0.4)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| 1.21.x | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Vault+1.21.4&label=1.21.4)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| latest GA | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Vault+latest&label=latest)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
 
 **Platforms** — cross-compiled in CI:
 
 | OS | amd64 | arm64 |
 |---|---|---|
-| ![linux](https://img.shields.io/badge/linux-FCC624?logo=linux&logoColor=black) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
-| ![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
-| ![FreeBSD](https://img.shields.io/badge/FreeBSD-AB2B28?logo=freebsd&logoColor=white) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
-| ![OpenBSD](https://img.shields.io/badge/OpenBSD-F2CA30?logo=openbsd&logoColor=black) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Famd64&label=amd64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/kalw/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Farm64&label=arm64)](https://github.com/kalw/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![linux](https://img.shields.io/badge/linux-FCC624?logo=linux&logoColor=black) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Famd64&label=amd64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+linux%2Farm64&label=arm64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![macOS](https://img.shields.io/badge/macOS-000000?logo=apple&logoColor=white) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Famd64&label=amd64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+darwin%2Farm64&label=arm64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![FreeBSD](https://img.shields.io/badge/FreeBSD-AB2B28?logo=freebsd&logoColor=white) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Famd64&label=amd64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+freebsd%2Farm64&label=arm64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
+| ![OpenBSD](https://img.shields.io/badge/OpenBSD-F2CA30?logo=openbsd&logoColor=black) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Famd64&label=amd64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) | [![](https://img.shields.io/github/actions/workflow/status/Believe-SA/vault-cloudflare-secret-engine/ci.yml?job=Build+openbsd%2Farm64&label=arm64)](https://github.com/Believe-SA/vault-cloudflare-secret-engine/actions/workflows/ci.yml) |
 
 A Vault secrets engine that issues short-lived Cloudflare API tokens on demand:
 
@@ -27,7 +36,7 @@ A Vault secrets engine that issues short-lived Cloudflare API tokens on demand:
 ## Install (pre-built binary)
 
 1. Download the asset matching your Vault server from the
-   [latest release](https://github.com/kalw/vault-cloudflare-secret-engine/releases/latest),
+   [latest release](https://github.com/Believe-SA/vault-cloudflare-secret-engine/releases/latest),
    e.g. `vault-cloudflare-secret-engine_<version>_linux_amd64`, together with
    `checksums.txt`.
 
@@ -107,7 +116,7 @@ Permission groups may be referenced by `id` **or** by `name` — names are
 resolved against Cloudflare's live permission-group list when a token is
 generated.
 
-> 🔧 **[Policy builder](https://kalw.github.io/vault-cloudflare-secret-engine/)** —
+> 🔧 **[Policy builder](https://believe-sa.github.io/vault-cloudflare-secret-engine/)** —
 > a hosted page that generates the `policies` JSON and the `vault write` command
 > from pick-lists (permission groups, resource scopes). No install required.
 
@@ -323,7 +332,25 @@ vault write cloudflare/config \
 Unit tests run with no external dependencies:
 
 ```bash
-go test ./...
+make test        # or: go test ./...
+```
+
+Vault integration tests build the plugin, start a real `vault server -dev`,
+register it in the catalog (sha256 + version), mount it, and drive every
+endpoint against a fake Cloudflare API — version pinning and mismatch
+rejection, config redaction, permission-group name resolution, lease expiry
+and revocation deleting tokens, renewal caps, root rotation, multiplexed
+mounts, plugin reload, and mount-disable revoking everything. The plugin is
+pointed at the fake through the `CLOUDFLARE_API_BASE_URL` environment
+variable, injected per-plugin at catalog registration (the variable is
+operator-controlled — the same trust level as the plugin binary itself). The
+Vault binary is downloaded into `.tools/` and verified against HashiCorp's
+checksums:
+
+```bash
+make test-vault                        # latest GA Vault
+make test-vault VAULT_VERSION=2.0.4    # a specific release
+VAULT_BIN=$(which vault) go test ./integration -v   # your own binary
 ```
 
 There is also an acceptance test that mints and revokes a real token against

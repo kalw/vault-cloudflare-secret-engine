@@ -65,7 +65,7 @@ changelog:
 
 release:
   github:
-    owner: kalw
+    owner: Believe-SA
     name: vault-cloudflare-secret-engine
   prerelease: auto
   draft: false
@@ -75,4 +75,4 @@ release:
     Download the asset matching your Vault server's OS/arch, verify it against
     `checksums.txt`, then register the SHA-256 with Vault's plugin catalog.
 
-    📦 **[Install instructions](https://github.com/kalw/vault-cloudflare-secret-engine#install-pre-built-binary)**
+    📦 **[Install instructions](https://github.com/Believe-SA/vault-cloudflare-secret-engine#install-pre-built-binary)**
