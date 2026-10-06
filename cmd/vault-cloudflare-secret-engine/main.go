@@ -42,7 +42,9 @@ func main() {
 	tlsConfig := apiClientMeta.GetTLSConfig()
 	tlsProviderFunc := api.VaultPluginTLSProvider(tlsConfig)
 
-	err := plugin.Serve(&plugin.ServeOpts{
+	// ServeMultiplex lets Vault run a single plugin process for every mount of
+	// this plugin (requires Vault >= 1.12).
+	err := plugin.ServeMultiplex(&plugin.ServeOpts{
 		BackendFactoryFunc: cloudflaresecrets.Factory,
 		TLSProviderFunc:    tlsProviderFunc,
 	})

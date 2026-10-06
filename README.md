@@ -40,7 +40,8 @@ A Vault secrets engine that issues short-lived Cloudflare API tokens on demand:
      /etc/vault/plugins/vault-cloudflare-secret-engine
    ```
 
-3. Register the plugin and enable the secrets engine:
+3. Register the plugin and enable the secrets engine (the plugin serves
+   multiplexed, which requires Vault ≥ 1.12):
 
    ```bash
    SHASUM=$(sha256sum /etc/vault/plugins/vault-cloudflare-secret-engine | cut -d ' ' -f1)
@@ -244,6 +245,15 @@ parent. Only a top-level token that holds *API Tokens · Write* can roll itself,
 which is exactly what the parent token needs to be — Cloudflare does not allow a
 token minted through the API to hold token-management permissions, so rotation
 preserves the existing token rather than creating a replacement.
+
+Rotation is guarded by a write-ahead log. The WAL entry is written **before**
+the roll — so a storage backend that cannot be written to aborts the rotation
+while the old value is still valid — and removed once the new value is
+persisted. If the process dies in between, Vault's rollback manager finds the
+entry, checks whether the stored credential still authenticates, and either
+reaps the entry (consistent state) or logs a CRITICAL message with the recovery
+procedure on every pass until a fresh parent token is written to the config —
+an interrupted rotation can therefore never fail silently.
 
 ## Security model
 

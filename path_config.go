@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -208,6 +209,78 @@ func (b *cloudflareBackend) pathConfigDelete(ctx context.Context, req *logical.R
 	return nil, req.Storage.Delete(ctx, configStoragePath)
 }
 
+// walKindRotateRoot is the WAL kind written around a parent-token roll.
+const walKindRotateRoot = "rotate-root"
+
+// walRotateRoot records an in-flight parent token roll. The entry is written
+// BEFORE the roll - doubling as a proof that storage is writable, so a broken
+// storage backend aborts the rotation before anything is invalidated - and
+// deleted after the new value is persisted. An entry that survives marks a
+// rotation that may have died between the Cloudflare-side roll and the
+// persist, which walRollback then diagnoses.
+type walRotateRoot struct {
+	TokenType string `json:"token_type"`
+	AccountID string `json:"account_id,omitempty"`
+	TokenID   string `json:"token_id"`
+}
+
+// walRollback is invoked by Vault's rollback manager for WAL entries older
+// than WALRollbackMinAge. For a rotate-root entry it checks whether the stored
+// parent credential still authenticates:
+//   - it does: the rotation either completed (new value persisted) or never
+//     rolled at Cloudflare - either way the state is consistent, drop the WAL.
+//   - it does not: the roll happened but the new value was lost. That cannot
+//     be self-healed (Cloudflare only returns the value once), so keep the WAL
+//     and log loudly with the recovery procedure on every rollback pass.
+func (b *cloudflareBackend) walRollback(ctx context.Context, req *logical.Request, kind string, data interface{}) error {
+	if kind != walKindRotateRoot {
+		return nil
+	}
+
+	entry, ok := data.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("rotate-root WAL has unexpected data type %T", data)
+	}
+	tokenType, _ := entry["token_type"].(string)
+	accountID, _ := entry["account_id"].(string)
+	tokenID, _ := entry["token_id"].(string)
+
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	config, err := getConfig(ctx, req.Storage)
+	if err != nil {
+		return err
+	}
+	if config == nil {
+		// Nothing left to diagnose against.
+		return nil
+	}
+	token, err := config.parentTokenFor(tokenType)
+	if err != nil {
+		return nil // context deconfigured since; nothing to check
+	}
+
+	scope := tokenScope{Type: tokenType, AccountID: accountID}
+	if _, err := b.newClient(token).verifyToken(ctx, scope); err != nil {
+		var apiErr *cfError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusUnauthorized {
+			b.Logger().Error(
+				"CRITICAL: an interrupted rotate-root left the stored parent credential invalid. "+
+					"Cloudflare rolled the token but the new value was lost before it could be persisted. "+
+					"Recover by minting a fresh top-level parent token in the Cloudflare dashboard and writing it to the config endpoint; "+
+					"this message repeats until the credential authenticates again",
+				"token_type", tokenType, "token_id", tokenID)
+			return fmt.Errorf("stored %s parent credential (token id %s) no longer authenticates after an interrupted rotation", tokenType, tokenID)
+		}
+		// Transient (network, 5xx): try again on the next rollback pass.
+		return err
+	}
+
+	// Stored credential works: state is consistent, let the WAL be reaped.
+	return nil
+}
+
 func pathConfigRotateRoot(b *cloudflareBackend) *framework.Path {
 	return &framework.Path{
 		Pattern: "config/rotate-root",
@@ -262,8 +335,24 @@ func (b *cloudflareBackend) pathConfigRotateRoot(ctx context.Context, req *logic
 	if err != nil {
 		return nil, fmt.Errorf("verifying parent token before rotation: %w", err)
 	}
+
+	// Write the WAL before rolling: it both marks the in-flight rotation for
+	// walRollback and proves storage is writable - if this fails, abort now,
+	// before the old value is invalidated.
+	walID, err := framework.PutWAL(ctx, req.Storage, walKindRotateRoot, &walRotateRoot{
+		TokenType: tokenType,
+		AccountID: scope.AccountID,
+		TokenID:   tokenID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("aborting rotation, storage is not writable (nothing was invalidated): %w", err)
+	}
+
 	newValue, err := client.rollToken(ctx, scope, tokenID)
 	if err != nil {
+		// Nothing rolled; the WAL is stale. Best-effort cleanup (walRollback
+		// verifies and reaps it anyway if this delete fails).
+		_ = framework.DeleteWAL(ctx, req.Storage, walID)
 		return nil, fmt.Errorf("rolling parent token: %w", err)
 	}
 	if newValue == "" {
@@ -293,6 +382,10 @@ func (b *cloudflareBackend) pathConfigRotateRoot(ctx context.Context, req *logic
 				"The stored %s credential is now invalid: retry this rotation immediately (it rolls again and persists), "+
 				"or mint a fresh parent token in the Cloudflare dashboard and write it to the config endpoint",
 			tokenID, err, tokenType)
+	}
+	if err := framework.DeleteWAL(ctx, req.Storage, walID); err != nil {
+		// Harmless: walRollback will verify the (healthy) state and reap it.
+		b.Logger().Warn("rotation succeeded but the WAL entry could not be removed; the rollback manager will reap it", "error", err)
 	}
 	b.Logger().Info("rotated parent cloudflare token", "token_type", tokenType, "token_id", tokenID)
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -70,6 +71,9 @@ func newBackend() *cloudflareBackend {
 		PathsSpecial: &logical.Paths{
 			SealWrapStorage: []string{configStoragePath},
 		},
+		// Recovers interrupted root rotations (see walRotateRoot / walRollback).
+		WALRollback:       b.walRollback,
+		WALRollbackMinAge: 5 * time.Minute,
 	}
 	if PluginVersion != "" {
 		b.Backend.RunningVersion = PluginVersion
