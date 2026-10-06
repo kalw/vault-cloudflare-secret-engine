@@ -15,3 +15,6 @@ cf-test.env
 
 # Generated at deploy time by the Pages workflow
 site/permission_groups.json
+
+# Vault binaries downloaded by `make test-vault`
+/.tools/
