@@ -2,6 +2,7 @@ package cloudflaresecrets
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -35,9 +36,12 @@ type cloudflareBackend struct {
 	// could lose an update (e.g. a rotated parent token clobbered back).
 	lock sync.RWMutex
 	// apiBaseURL, when non-empty, overrides the Cloudflare API base URL for
-	// every client this backend builds. It is a test-only seam: it is not
-	// settable through any configured path, so it cannot be influenced by an
-	// operator or attacker.
+	// every client this backend builds. It is not settable through any
+	// configured path: unit tests assign it directly, and the compiled plugin
+	// honors the CLOUDFLARE_API_BASE_URL environment variable (set per plugin
+	// at catalog registration, or on the Vault server process) so integration
+	// suites can point it at a mock. The environment is operator-controlled -
+	// the same trust level as the plugin binary itself.
 	apiBaseURL string
 }
 
@@ -53,6 +57,9 @@ func (b *cloudflareBackend) newClient(token string) *cloudflareClient {
 
 func newBackend() *cloudflareBackend {
 	b := &cloudflareBackend{}
+	if v := os.Getenv("CLOUDFLARE_API_BASE_URL"); v != "" {
+		b.apiBaseURL = v
+	}
 
 	b.Backend = &framework.Backend{
 		Help:        strings.TrimSpace(backendHelp),

@@ -50,6 +50,30 @@ jobs:
           CGO_ENABLED: "0"
         run: go build -o /dev/null ./cmd/vault-cloudflare-secret-engine
 
+  vault:
+    # Runs the compiled plugin inside a real Vault dev server against a fake
+    # Cloudflare API: catalog registration (sha256 + version), version pinning,
+    # leases/revocation, rotation, multiplexing and reload.
+    name: Vault ${{ matrix.vault }}
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        vault:
+          - "1.21.4" # previous major, last 1.x
+          - "2.0.4"
+          - "2.1.1"
+          - latest # newest GA release, catches upcoming breakage early
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Integration tests
+        run: make test-vault VAULT_VERSION=${{ matrix.vault }}
+
   acceptance:
     name: Acceptance tests (live Cloudflare)
     runs-on: ubuntu-latest
